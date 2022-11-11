@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  demo
+
+Globals:
+  Function:
+    Timeout: 300
+
+Parameters:
+  StageName:
+    Type: String
+    Default: dev
+    Description: (Required) Enter dev, test, stag, prod. Default is dev.
+    AllowedValues:
+      - dev
+      - test
+      - stag
+      - prod
+
+Resources:
+  ServiceApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration: true
+
+  ApiFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: app/
+      Handler: app.handler
+      Runtime: python3.8
+      Events:
+        CorsPreflight:
+          Type: HttpApi 
+          Properties: 
+            Path: /{proxy+}
+            ApiId: !Ref ServiceApi 
+            Method: OPTIONS
+        Api:
+          Type: HttpApi
+          Properties:
+            Path: $default
+            ApiId: !Ref ServiceApi
+            Method: ANY
+
+ApiFnLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ApiFn}
+      RetentionInDays: 14
+
+Outputs:
+  Api:
+    Description: "API Gateway endpoint URL for Prod stage for App function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
